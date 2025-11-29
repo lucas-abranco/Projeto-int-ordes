@@ -20,4 +20,7 @@ export class OrderItem {
 
   @ManyToOne(() => Order, (order) => order.items)
   order: Order;
+
+  @Column({ nullable: true }) // Permite nulo caso algum produto antigo não tenha imagem
+  image: string;
 }

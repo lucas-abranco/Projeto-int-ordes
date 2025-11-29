@@ -58,7 +58,13 @@ export class OrdersController {
       return this.ordersService.getAvailableOrders();
   }
 
-  // --- NOVAS ROTAS DE ENTREGADOR (Agora dentro da classe!) ---
+  // --- ENTREGADOR ---
+  
+  @Get('orders/driver/active')
+  getDriverActiveOrder(@Headers('authorization') auth: string) {
+    return this.ordersService.getDriverActiveOrder(getUserIdFromToken(auth));
+  }
+
   @Patch('orders/:id/accept')
   acceptOrder(@Headers('authorization') auth: string, @Param('id') id: string) {
     return this.ordersService.acceptOrder(getUserIdFromToken(auth), id);
