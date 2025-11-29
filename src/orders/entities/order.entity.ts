@@ -15,7 +15,7 @@ export class Order {
   @Column({ nullable: true })
   driverId: string;
 
-  // MUDANÇA: Default 'OPEN' em vez de 'Aguardando Pagamento'
+  // CORREÇÃO: Define o padrão como 'OPEN' para que o pedido nasça visível
   @Column({ default: 'OPEN' })
   status: string;
 

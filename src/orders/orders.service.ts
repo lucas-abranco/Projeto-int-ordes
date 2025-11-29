@@ -4,7 +4,7 @@ import { Repository, IsNull } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { CartItem } from './entities/cart-item.entity';
 import { Order } from './entities/order.entity';
-import { OrderItem } from './entities/order-item.entity';
+import { OrderItem } from './entities/order-item.entity'; // Certifique-se que este arquivo existe
 
 @Injectable()
 export class OrdersService {
@@ -21,7 +21,7 @@ export class OrdersService {
     return { items, subtotal: subtotal.toFixed(2) };
   }
 
- async addToCart(userId: string, itemData: any) {
+  async addToCart(userId: string, itemData: any) {
     let cartItem = await this.cartRepo.findOne({ where: { userId, productId: itemData.id } });
 
     if (cartItem) {
@@ -42,11 +42,6 @@ export class OrdersService {
     return this.getCart(userId);
   }
 
-  async updateStatus(orderId: string, status: string) {
-    await this.orderRepo.update({ id: orderId }, { status });
-    console.log(`Status do pedido ${orderId} atualizado para: ${status}`);
-  }
-
   async removeFromCart(userId: string, id: string) {
     await this.cartRepo.delete({ userId, id });
     return this.getCart(userId);
@@ -65,7 +60,7 @@ export class OrdersService {
     return { message: 'Carrinho limpo' };
   }
 
-  // --- PEDIDOS (LÓGICA CORRIGIDA) ---
+  // --- PEDIDOS (Lógica Corrigida) ---
 
   async createOrder(userId: string, orderData: any) {
     const cartItems = await this.cartRepo.find({ where: { userId } });
@@ -80,8 +75,7 @@ export class OrdersService {
       deliveryAddress: orderData.deliveryAddress,
       deliveryFee: orderData.deliveryFee,
       totalPrice: total,
-      // MUDANÇA: Status inicial técnico para aparecer para o motorista
-      status: 'OPEN', 
+      status: 'OPEN', // CRUCIAL: Define status inicial como OPEN
       items: cartItems.map(ci => ({
         productId: ci.productId,
         name: ci.name,
@@ -92,8 +86,10 @@ export class OrdersService {
 
     const savedOrder = await this.orderRepo.save(order);
 
+    // Limpa o carrinho após o pedido
     await this.cartRepo.delete({ userId });
 
+    // Emite evento para pagamentos (RabbitMQ)
     this.rabbitClient.emit('order_created', {
       orderId: savedOrder.id,
       userId: userId,
@@ -112,18 +108,19 @@ export class OrdersService {
     });
   }
   
+  // Endpoint usado pelo Motorista
   async getAvailableOrders() {
-      // MUDANÇA: Busca pedidos 'OPEN' (criados, mas sem motorista)
       return this.orderRepo.find({
+          // CRUCIAL: Busca pedidos OPEN sem motorista
           where: { status: 'OPEN', driverId: IsNull() },
           relations: ['items']
-      })
+      });
   }
 
   async acceptOrder(driverId: string, orderId: string) {
     await this.orderRepo.update(
       { id: orderId }, 
-      // MUDANÇA: Define status técnico 'IN_ROUTE'
+      // CRUCIAL: Define status IN_ROUTE
       { driverId, status: 'IN_ROUTE' } 
     );
     return { message: 'Rota aceita!' };
@@ -132,7 +129,7 @@ export class OrdersService {
   async completeOrder(driverId: string, orderId: string) {
     await this.orderRepo.update(
       { id: orderId }, 
-      // MUDANÇA: Define status técnico 'DELIVERED'
+      // CRUCIAL: Define status DELIVERED
       { status: 'DELIVERED' } 
     );
     return { message: 'Entrega concluída!' };
