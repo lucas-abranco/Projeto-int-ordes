@@ -15,7 +15,8 @@ export class Order {
   @Column({ nullable: true })
   driverId: string;
 
-  @Column({ default: 'Aguardando Pagamento' })
+  // MUDANÇA: Default 'OPEN' em vez de 'Aguardando Pagamento'
+  @Column({ default: 'OPEN' })
   status: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })

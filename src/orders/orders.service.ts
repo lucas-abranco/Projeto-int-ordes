@@ -38,10 +38,7 @@ export class OrdersService {
       });
     }
     
-    // 1. Salvamos o item
     await this.cartRepo.save(cartItem);
-    
-    // 2. CORREÇÃO: Retornamos o carrinho completo, não apenas o item salvo
     return this.getCart(userId);
   }
 
@@ -51,7 +48,6 @@ export class OrdersService {
   }
 
   async removeFromCart(userId: string, id: string) {
-    // Deleta pelo ID do item do carrinho, não do produto
     await this.cartRepo.delete({ userId, id });
     return this.getCart(userId);
   }
@@ -63,30 +59,14 @@ export class OrdersService {
     await this.cartRepo.update({ id: cartItemId, userId }, { quantity });
     return this.getCart(userId);
   }
-
-  async acceptOrder(driverId: string, orderId: string) {
-    await this.orderRepo.update(
-      { id: orderId }, 
-      { driverId, status: 'Em rota de entrega' }
-    );
-    return { message: 'Rota aceita!' };
-  }
-
-  async completeOrder(driverId: string, orderId: string) {
-    // Em produção, validar se o pedido pertence ao motorista
-    await this.orderRepo.update(
-      { id: orderId }, 
-      { status: 'Entregue' } // Status final que move para histórico
-    );
-    return { message: 'Entrega concluída!' };
-  }
   
   async clearCart(userId: string) {
     await this.cartRepo.delete({ userId });
     return { message: 'Carrinho limpo' };
   }
 
-  // --- PEDIDOS ---
+  // --- PEDIDOS (LÓGICA CORRIGIDA) ---
+
   async createOrder(userId: string, orderData: any) {
     const cartItems = await this.cartRepo.find({ where: { userId } });
     if (cartItems.length === 0) throw new Error('Carrinho vazio');
@@ -100,7 +80,8 @@ export class OrdersService {
       deliveryAddress: orderData.deliveryAddress,
       deliveryFee: orderData.deliveryFee,
       totalPrice: total,
-      status: 'Aguardando Pagamento',
+      // MUDANÇA: Status inicial técnico para aparecer para o motorista
+      status: 'OPEN', 
       items: cartItems.map(ci => ({
         productId: ci.productId,
         name: ci.name,
@@ -132,9 +113,28 @@ export class OrdersService {
   }
   
   async getAvailableOrders() {
+      // MUDANÇA: Busca pedidos 'OPEN' (criados, mas sem motorista)
       return this.orderRepo.find({
-          where: { status: 'Em preparação', driverId: IsNull() },
+          where: { status: 'OPEN', driverId: IsNull() },
           relations: ['items']
       })
+  }
+
+  async acceptOrder(driverId: string, orderId: string) {
+    await this.orderRepo.update(
+      { id: orderId }, 
+      // MUDANÇA: Define status técnico 'IN_ROUTE'
+      { driverId, status: 'IN_ROUTE' } 
+    );
+    return { message: 'Rota aceita!' };
+  }
+
+  async completeOrder(driverId: string, orderId: string) {
+    await this.orderRepo.update(
+      { id: orderId }, 
+      // MUDANÇA: Define status técnico 'DELIVERED'
+      { status: 'DELIVERED' } 
+    );
+    return { message: 'Entrega concluída!' };
   }
 }
